@@ -12,7 +12,6 @@ app.use(cors());
 app.use(express.json());
 
 
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.quedl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -37,7 +36,10 @@ async function run() {
             const result = await addpostCullection.insertOne(data);
             res.send(result)
         })
-
+        app.get('/addpost', async (req, res) => {
+            const result = await addpostCullection.find().toArray()
+            res.send(result)
+        })
 
 
         // Send a ping to confirm a successful connection
@@ -45,7 +47,7 @@ async function run() {
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
-        await client.close();
+        // await client.close();
     }
 }
 run().catch(console.dir);
