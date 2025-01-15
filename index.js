@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 const app = express();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 
@@ -29,6 +29,7 @@ async function run() {
         await client.connect();
 
         const addpostCullection = client.db("Postify").collection("addpost");
+        const comentsCullection = client.db("Postify").collection("coments");
 
 
         app.post('/addpost', async (req, res) => {
@@ -37,7 +38,73 @@ async function run() {
             res.send(result)
         })
         app.get('/addpost', async (req, res) => {
-            const result = await addpostCullection.find().toArray()
+            const { search } = req.query;
+            const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
+            const result = await addpostCullection.find(searchFilter).sort({ carentTime: -1 }).toArray()
+            res.send(result)
+        })
+
+        app.get('/posts/popularity', async (req, res) => {
+            const { search } = req.query;
+            const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {}
+            const result = await addpostCullection.aggregate([
+                {
+                    $match: searchFilter
+                },
+                {
+                    $addFields: {
+                        voteDifference: { $subtract: ["$upVote", "$downVote"] },
+                    },
+                },
+                {
+                    $sort: { voteDifference: -1 },
+                },
+            ]).toArray();
+            res.send(result)
+        })
+
+
+        app.get('/addpost/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await addpostCullection.findOne(query);
+            res.send(result)
+        })
+
+        app.put('/upVote/:id', async (req, res) => {
+            const id = req.params.id
+            const { upVote } = req.body;
+            const update = {
+                $inc: { upVote: 1 }
+            }
+            const query = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const result = await addpostCullection.updateOne(query, update, options)
+            res.send(result)
+            console.log(result);
+        })
+        app.put('/downVote/:id', async (req, res) => {
+            const id = req.params.id
+            const { downVote } = req.body;
+            const update = {
+                $inc: { downVote: 1 }
+            }
+            const query = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const result = await addpostCullection.updateOne(query, update, options)
+            res.send(result)
+            console.log(result);
+        })
+
+
+        app.post('/coment', async (req, res) => {
+            const coment = req.body;
+            const result = await comentsCullection.insertOne(coment);
+            res.send(result)
+        })
+        app.get('/coment', async (req, res) => {
+            const query = req.params.comentId
+            const result = await comentsCullection.find().toArray()
             res.send(result)
         })
 
