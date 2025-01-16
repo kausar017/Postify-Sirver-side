@@ -37,32 +37,68 @@ async function run() {
             const result = await addpostCullection.insertOne(data);
             res.send(result)
         })
+
+
+
+        app.get('/posts/popularity', async (req, res) => {
+            const { search, sortByPopularity } = req.query;
+            const { carentTime } = req.params;
+            console.log('currentitem=', carentTime);
+            const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
+
+            let result = [];
+            if (sortByPopularity === 'true') {
+
+                result = await addpostCullection.aggregate([
+                    {
+                        $addFields: {
+                            voteDifference: { $subtract: ["$upVote", "$downVote"] },
+                        },
+                    },
+                    { $match: searchFilter },
+                    { $sort: { voteDifference: -1 } },
+                ]).toArray();
+            } else {
+                result = await addpostCullection.find(searchFilter).sort({ carentTime: 1 }).toArray();
+
+
+            }
+            res.send(result);
+        });
+
+
         app.get('/addpost', async (req, res) => {
             const { search } = req.query;
+            const { carentTime } = req.body;
+            // console.log('currentitem=', carentTime);
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
             const result = await addpostCullection.find(searchFilter).sort({ carentTime: -1 }).toArray()
             res.send(result)
         })
-   
-        app.get('/posts/popularity', async (req, res) => {
-            const { search } = req.query;
-            const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {}
-            const result = await addpostCullection.aggregate([
-                {
-                    $match: searchFilter
-                },
-                {
-                    $addFields: {
-                        voteDifference: { $subtract: ["$upVote", "$downVote"] },
-                    },
-                },
-                {
-                    $sort: { voteDifference: -1 },
-                },
-            ]).toArray();
+
+
+
+        app.get('/addpost/:email'), async (req, res) => {
+            const email = req.params?.email;
+            const query = { UserEmail: email }
+            const result = await addpostCullection.find(query).sort({ carentTime: -1 }).toArray()
+            res.send(result)
+        }
+
+        app.get('/count', async (req, res) => {
+            const result = await addpostCullection.find().toArray()
             res.send(result)
         })
 
+      
+
+        app.get('/posts/count', async (req, res) => {
+            const userEmail = req.query.email;
+            const count = await addpostCullection.countDocuments({ authorEmail: userEmail });
+            res.send({ count });
+        });
+
+   
 
         app.get('/addpost/:id', async (req, res) => {
             const id = req.params.id
