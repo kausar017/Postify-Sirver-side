@@ -43,7 +43,7 @@ async function run() {
             const result = await addpostCullection.find(searchFilter).sort({ carentTime: -1 }).toArray()
             res.send(result)
         })
-
+   
         app.get('/posts/popularity', async (req, res) => {
             const { search } = req.query;
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {}
