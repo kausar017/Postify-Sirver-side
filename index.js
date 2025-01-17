@@ -28,9 +28,30 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
+        const bageCullection = client.db("Postify").collection("bage");
         const addpostCullection = client.db("Postify").collection("addpost");
         const comentsCullection = client.db("Postify").collection("coments");
 
+
+        app.post('/users/:email', async (req, res) => {
+            const bage = req.body;
+            const email = req.params.email;
+            console.log(email);
+
+            const query = { email: email }
+            const existingUser = await bageCullection.findOne(query);
+
+            if (existingUser) {
+                return res.send({ message: 'User already added' });
+            }
+            const result = await bageCullection.insertOne(bage);
+            res.send(result)
+        })
+
+        app.get('/users', async (req, res) => {
+            const result = await bageCullection.find().toArray()
+            res.send(result)
+        })
 
         app.post('/addpost', async (req, res) => {
             const data = req.body;
@@ -39,11 +60,10 @@ async function run() {
         })
 
 
-
         app.get('/posts/popularity', async (req, res) => {
             const { search, sortByPopularity } = req.query;
             const { carentTime } = req.params;
-            console.log('currentitem=', carentTime);
+            // console.log('currentitem=', carentTime);
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
 
             let result = [];
@@ -76,6 +96,13 @@ async function run() {
             res.send(result)
         })
 
+        // DELETE API Endpoint
+        app.delete('/delete/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await addpostCullection.deleteOne(query);
+            res.send(result);
+        });
 
 
         app.get('/addpost/:email'), async (req, res) => {
@@ -90,7 +117,7 @@ async function run() {
             res.send(result)
         })
 
-      
+
 
         app.get('/posts/count', async (req, res) => {
             const userEmail = req.query.email;
@@ -98,7 +125,7 @@ async function run() {
             res.send({ count });
         });
 
-   
+
 
         app.get('/addpost/:id', async (req, res) => {
             const id = req.params.id
