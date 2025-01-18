@@ -32,6 +32,7 @@ async function run() {
         const bageCullection = client.db("Postify").collection("bage");
         const addpostCullection = client.db("Postify").collection("addpost");
         const comentsCullection = client.db("Postify").collection("coments");
+        const feedbackCullection = client.db("Postify").collection("feedback");
 
 
         app.post('/users/:email', async (req, res) => {
@@ -48,24 +49,39 @@ async function run() {
             const result = await bageCullection.insertOne(bage);
             res.send(result)
         })
-  
+
         app.get('/users', async (req, res) => {
             const result = await bageCullection.find().toArray()
             res.send(result)
         })
-        app.put('/users/:id', async (req, res) => {
-            const id = req.params.id
-            const { bage } = req.body;
+
+        app.put('/users/:email', async (req, res) => {
+            const email = req.params.email;
+            console.log('bage', email);
+            const query = { email: email };
             const update = {
-                $set: { bage }
-            }
-            const query = { _id: new ObjectId(id) };
-            // const options = { upsert: true }
+                $set: req.body,
+            };
             const result = await bageCullection.updateOne(query, update)
             res.send(result)
             // console.log(result);
         })
 
+        // comment feedback
+        app.post('/feedback/:id', async (req, res) => {
+            const commentId = req.params.id;
+            const { feedback } = req.body;
+            const feedbackData = {
+                commentId,  
+                feedback,  
+                createdAt: new Date(),
+            };
+            const result = await feedbackCullection.insertOne(feedbackData);
+            res.send(result)
+        })
+
+
+        // addpost 
         app.post('/addpost', async (req, res) => {
             const data = req.body;
             const result = await addpostCullection.insertOne(data);
@@ -93,8 +109,6 @@ async function run() {
                 ]).toArray();
             } else {
                 result = await addpostCullection.find(searchFilter).sort({ carentTime: 1 }).toArray();
-
-
             }
             res.send(result);
         });
