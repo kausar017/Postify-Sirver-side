@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const stripe = require('stripe')(process.env.PAYMENT_KEY)
 const port = process.env.PORT || 5000;
 const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -36,7 +37,7 @@ async function run() {
         app.post('/users/:email', async (req, res) => {
             const bage = req.body;
             const email = req.params.email;
-            console.log(email);
+            // console.log(email);
 
             const query = { email: email }
             const existingUser = await bageCullection.findOne(query);
@@ -47,10 +48,22 @@ async function run() {
             const result = await bageCullection.insertOne(bage);
             res.send(result)
         })
-
+  
         app.get('/users', async (req, res) => {
             const result = await bageCullection.find().toArray()
             res.send(result)
+        })
+        app.put('/users/:id', async (req, res) => {
+            const id = req.params.id
+            const { bage } = req.body;
+            const update = {
+                $set: { bage }
+            }
+            const query = { _id: new ObjectId(id) };
+            // const options = { upsert: true }
+            const result = await bageCullection.updateOne(query, update)
+            res.send(result)
+            // console.log(result);
         })
 
         app.post('/addpost', async (req, res) => {
@@ -144,8 +157,9 @@ async function run() {
             const options = { upsert: true }
             const result = await addpostCullection.updateOne(query, update, options)
             res.send(result)
-            console.log(result);
+            // console.log(result);
         })
+
         app.put('/downVote/:id', async (req, res) => {
             const id = req.params.id
             const { downVote } = req.body;
@@ -156,8 +170,28 @@ async function run() {
             const options = { upsert: true }
             const result = await addpostCullection.updateOne(query, update, options)
             res.send(result)
-            console.log(result);
+            // console.log(result);
         })
+
+        // create payment API
+        app.post('/payment-intent', async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+
+            try {
+                const paymentIntent = await stripe.paymentIntents.create({
+                    amount: amount,
+                    currency: 'usd',
+                    payment_method_types: ['card'],
+                });
+
+                res.status(200).send({
+                    clientSecret: paymentIntent.client_secret,
+                });
+            } catch (error) {
+                res.status(500).send({ error: error.message });
+            }
+        });
 
 
         app.post('/coment', async (req, res) => {
