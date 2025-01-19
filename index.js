@@ -114,7 +114,7 @@ async function run() {
         // comment feedback
         app.post('/feedback/:id', async (req, res) => {
             const commentId = req.params.id;
-            const { feedback } = req.body;
+            const { feedback } = req.body;  
             const feedbackData = {
                 commentId,
                 feedback,
