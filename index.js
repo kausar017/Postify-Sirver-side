@@ -2,9 +2,10 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const stripe = require('stripe')(process.env.PAYMENT_KEY)
-const port = process.env.PORT || 5000;
 const app = express();
+var jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const port = process.env.PORT || 5000;
 
 
 
@@ -114,7 +115,7 @@ async function run() {
         // comment feedback
         app.post('/feedback/:id', async (req, res) => {
             const commentId = req.params.id;
-            const { feedback } = req.body;  
+            const { feedback } = req.body;
             const feedbackData = {
                 commentId,
                 feedback,
@@ -135,7 +136,7 @@ async function run() {
 
         app.get('/posts/popularity', async (req, res) => {
             const { search, sortByPopularity } = req.query;
-          
+
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
 
             let result = [];
@@ -148,10 +149,10 @@ async function run() {
                         },
                     },
                     { $match: searchFilter },
-                    { $sort: { voteDifference: -1 } },
+                    { $sort: { carentTime: -1 } },
                 ]).toArray();
             } else {
-                result = (await addpostCullection.find(searchFilter).sort(carentTime - 1).toArray())
+                result = (await addpostCullection.find(searchFilter).sort({ carentTime: -1 }).toArray())
             }
             res.send(result);
         });
@@ -159,7 +160,7 @@ async function run() {
 
         app.get('/addpost', async (req, res) => {
             const { search } = req.query;
-            const { carentTime } = req.body;
+            // const { carentTime } = req.body;
             // console.log('currentitem=', carentTime);
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
             const result = await addpostCullection.find(searchFilter).toArray()
@@ -167,10 +168,10 @@ async function run() {
         })
         app.get('/adminProfile', async (req, res) => {
             const { search } = req.query;
-            const { carentTime } = req.body;
+            // const { carentTime } = req.body;
             // console.log('currentitem=', carentTime);
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
-            const result = await addpostCullection.find(searchFilter).sort({ carentTime: -1 }).toArray()
+            const result = await addpostCullection.find(searchFilter).toArray()
             res.send(result)
         })
 
@@ -188,9 +189,12 @@ async function run() {
 
 
         app.get('/addpost/:email'), async (req, res) => {
-            const email = req.params?.email;
+            const email = req.params?.email
+            console.log(email);
             const query = { UserEmail: email }
             const result = await addpostCullection.find(query).sort({ carentTime: -1 }).toArray()
+            // console.log(query, result);
+            // const result = await addpostCullection.find({ UserEmail: email }).sort({ carentTime: -1 }).toArray();
             res.send(result)
         }
 
