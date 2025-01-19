@@ -135,8 +135,7 @@ async function run() {
 
         app.get('/posts/popularity', async (req, res) => {
             const { search, sortByPopularity } = req.query;
-            // const {carentTime} = req.body;
-            // console.log('currentitem=', carentTime);
+          
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
 
             let result = [];
@@ -159,6 +158,14 @@ async function run() {
 
 
         app.get('/addpost', async (req, res) => {
+            const { search } = req.query;
+            const { carentTime } = req.body;
+            // console.log('currentitem=', carentTime);
+            const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
+            const result = await addpostCullection.find(searchFilter).toArray()
+            res.send(result)
+        })
+        app.get('/adminProfile', async (req, res) => {
             const { search } = req.query;
             const { carentTime } = req.body;
             // console.log('currentitem=', carentTime);
