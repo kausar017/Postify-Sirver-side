@@ -9,18 +9,9 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 
 
-
-// meddilwar
-// middelware
-// const corsOptions = {
-//     origin: ['http://localhost:5173'],
-//     credentials: true,
-//     optionalSuccessStatus: 200
-// }
-
 app.use(cors());
 app.use(express.json());
-app.use(cookieParser())
+// app.use(cookieParser())
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.quedl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -32,6 +23,7 @@ const client = new MongoClient(uri, {
         deprecationErrors: true,
     }
 });
+
 
 async function run() {
     try {
@@ -57,7 +49,7 @@ async function run() {
 
         // meddelwar
         const verifiToken = (req, res, next) => {
-            console.log('inside verify token', req.headers.authorization);
+            // console.log('inside verify token', req.headers.authorization);
             const authHeader = req.headers.authorization;
             if (!authHeader) {
                 return res.status(401).send({ massage: 'unauthorize access' })
@@ -72,24 +64,10 @@ async function run() {
             })
         }
 
-
-
-        // const verifyAdmin = async (req, res, next) => {
-        //     const email = req.decoded.email;
-        //     console.log(email);
-        //     const query = { userEmail: email };
-        //     const user = await mackAdminCullection.findOne(query);
-        //     const isAdmin = user?.Makeadmin === 'Admin';
-        //     if (!isAdmin) {
-        //         return res.status(403).send({ message: 'forbidden' });
-        //     }
-        //     next()
-        // }
-
         const verifiAdmin = async (req, res, next) => {
             const email = req.decoded.email;
             const query = { email: email }
-            console.log('vairfy admin 91:', query);
+            // console.log('vairfy admin 91:', query);
             const user = await bageCullection.findOne(query)
             const isAdmin = user?.role === "admin";
             if (!isAdmin) {
@@ -101,13 +79,13 @@ async function run() {
         // admin 
         app.get('/users/admin/:email', verifiToken, verifiAdmin, async (req, res) => {
             const email = req.params?.email;
-            console.log('182', email);
+            // console.log('182', email);
             if (email !== req.decoded.email) {
                 return res.status(401).send({ message: 'unathureze access' })
             }
             const query = { email: email }
             const user = await bageCullection.findOne(query);
-            console.log('108 bagcullection admin chack', user);
+            // console.log('108 bagcullection admin chack', user);
             let admin = false;
             if (user) {
                 admin = user?.role === 'admin';
@@ -117,7 +95,7 @@ async function run() {
 
 
 
-        app.post('/tags', async (req, res) => {
+        app.post('/tags', verifiToken, async (req, res) => {
             const data = req.body;
             const result = await tagesCullection.insertOne(data);
             res.send(result)
@@ -130,11 +108,12 @@ async function run() {
         })
 
         // Announcement added for admin Announcement page
-        app.post('/announcement', async (req, res) => {
+        app.post('/announcement',async (req, res) => {
             const data = req.body;
             const result = await AnnouncementCullection.insertOne(data);
             res.send(result)
         })
+
         // Announcement fatch for admin Announcement page
         app.get('/announcement', async (req, res) => {
             const Announc = req.body;
@@ -173,6 +152,8 @@ async function run() {
             const result = await bageCullection.insertOne(bage);
             res.send(result)
         })
+
+
         // bage gat
         app.get('/users', async (req, res) => {
             const { search } = req.query;
@@ -182,7 +163,7 @@ async function run() {
         })
 
         // bage update
-        app.put('/users/:email', async (req, res) => {
+        app.put('/users/:email', verifiToken, verifiAdmin, async (req, res) => {
             const email = req.params.email;
             // console.log('bage', email);
             const query = { email: email };
@@ -194,7 +175,8 @@ async function run() {
             // console.log(result);
         })
 
-        app.put('/adminUpdate/:id', async (req, res) => {
+        // role update
+        app.put('/adminUpdate/:id', verifiToken, verifiAdmin, async (req, res) => {
             const id = req.params.id
             const role = req.body;
             const update = {
@@ -229,12 +211,12 @@ async function run() {
         });
 
         // reported data get
-        app.get('/reported', async (req, res) => {
+        app.get('/reported', verifiToken, verifiAdmin, async (req, res) => {
             const result = await feedbackCullection.find().toArray()
             res.send(result)
         })
 
-        app.delete('/deletFeedback/:id', async (req, res) => {
+        app.delete('/deletFeedback/:id', verifiToken, verifiAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await feedbackCullection.deleteOne(query);
