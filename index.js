@@ -12,13 +12,13 @@ const port = process.env.PORT || 5000;
 
 // meddilwar
 // middelware
-const corsOptions = {
-    origin: ['http://localhost:5173'],
-    credentials: true,
-    optionalSuccessStatus: 200
-}
+// const corsOptions = {
+//     origin: ['http://localhost:5173'],
+//     credentials: true,
+//     optionalSuccessStatus: 200
+// }
 
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json());
 app.use(cookieParser())
 
@@ -47,73 +47,76 @@ async function run() {
         const mackAdminCullection = client.db("Postify").collection("mackAdmin");
 
 
-        // // jwt releted api
-        // app.post('/jwt', async (req, res) => {
-        //     const user = req.body;
-        //     const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '356' })
-        //     res.send({ token })
-        // })
-        // // madillware 
-        // const verifiToken = (req, res, next) => {
 
-        // }
-
-
-
-        // jwt creat
+        // jwt related api
         app.post('/jwt', async (req, res) => {
-            try {
-                const { email } = req.body;
-                if (!email) {
-                    return res.status(400).send({ error: 'Email is required' });
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '365d' })
+            res.send({ token })
+        })
+
+        // meddelwar
+        const verifiToken = (req, res, next) => {
+            console.log('inside verify token', req.headers.authorization);
+            const authHeader = req.headers.authorization;
+            if (!authHeader) {
+                return res.status(401).send({ massage: 'unauthorize access' })
+            }
+            const token = authHeader.split(' ')[1];
+            jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+                if (err) {
+                    return res.send(401).send({ massage: 'forbiddan access' })
                 }
-                const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '365d' });
-                res.cookie('token', token, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-                });
-
-                res.send({ success: true, token });
-            } catch (error) {
-                console.error('JWT Error:', error.message);
-                res.status(500).send({ error: 'Internal Server Error' });
-            }
-        });
-
-
-        // clear token
-        app.get('/logout', async (req, res) => {
-            try {
-                res.clearCookie('token', {
-                    maxAge: 0,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-                }).send({ success: true, message: 'Logged out successfully' });
-            } catch (error) {
-                console.error('Logout Error:', error);
-                res.status(500).send({ success: false, message: error.message });
-            }
-        });
-
-
-
-        // verify token
-        const verifyToken = async (req, res, next) => {
-            const token = req.cookies?.token
-            if (!token) {
-                return res.status(401).send({ massage: 'unauthorized access' })
-            }
-            jwt.verify(token, process.env.ACCESS_TOKEN, (error, decoded) => {
-                if (error) {
-                    return res.status(401).send({ massage: 'unauthorized access' })
-                }
-                req.user = decoded
+                req.decoded = decoded;
                 next()
             })
         }
 
-        // tags added for admin profile page
+
+
+        // const verifyAdmin = async (req, res, next) => {
+        //     const email = req.decoded.email;
+        //     console.log(email);
+        //     const query = { userEmail: email };
+        //     const user = await mackAdminCullection.findOne(query);
+        //     const isAdmin = user?.Makeadmin === 'Admin';
+        //     if (!isAdmin) {
+        //         return res.status(403).send({ message: 'forbidden' });
+        //     }
+        //     next()
+        // }
+
+        const verifiAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email }
+            console.log('vairfy admin 91:', query);
+            const user = await bageCullection.findOne(query)
+            const isAdmin = user?.role === "admin";
+            if (!isAdmin) {
+                return res.status(403).send({ massage: 'forbidden access' })
+            }
+            next()
+        }
+
+        // admin 
+        app.get('/users/admin/:email', verifiToken, verifiAdmin, async (req, res) => {
+            const email = req.params?.email;
+            console.log('182', email);
+            if (email !== req.decoded.email) {
+                return res.status(401).send({ message: 'unathureze access' })
+            }
+            const query = { email: email }
+            const user = await bageCullection.findOne(query);
+            console.log('108 bagcullection admin chack', user);
+            let admin = false;
+            if (user) {
+                admin = user?.role === 'admin';
+            }
+            res.send({ admin })
+        })
+
+
+
         app.post('/tags', async (req, res) => {
             const data = req.body;
             const result = await tagesCullection.insertOne(data);
@@ -153,6 +156,8 @@ async function run() {
             res.send(result)
         })
 
+
+
         // bage added
         app.post('/users/:email', async (req, res) => {
             const bage = req.body;
@@ -170,13 +175,16 @@ async function run() {
         })
         // bage gat
         app.get('/users', async (req, res) => {
-            const result = await bageCullection.find().toArray()
+            const { search } = req.query;
+            const searchFilter = search ? { name: { $regex: search, $options: 'i' } } : {};
+            const result = await bageCullection.find(searchFilter).toArray()
             res.send(result)
         })
+
         // bage update
         app.put('/users/:email', async (req, res) => {
             const email = req.params.email;
-            console.log('bage', email);
+            // console.log('bage', email);
             const query = { email: email };
             const update = {
                 $set: req.body,
@@ -186,19 +194,52 @@ async function run() {
             // console.log(result);
         })
 
+        app.put('/adminUpdate/:id', async (req, res) => {
+            const id = req.params.id
+            const role = req.body;
+            const update = {
+                $set: role
+            }
+            const query = { _id: new ObjectId(id) };
+            const result = await bageCullection.updateOne(query, update,)
+            res.send(result)
+            // console.log(result);
+        })
+
         // comment feedback
         app.post('/feedback/:id', async (req, res) => {
             const commentId = req.params.id;
-            const { feedback } = req.body;
+            const { feedback, filteredComments } = req.body;
+
             const feedbackData = {
                 commentId,
                 feedback,
+                filteredComments,
                 createdAt: new Date(),
+                Status: 'panding'
             };
-            const result = await feedbackCullection.insertOne(feedbackData);
+
+            try {
+                const result = await feedbackCullection.insertOne(feedbackData);
+                res.send(result);
+            } catch (error) {
+                console.error("Error saving feedback:", error);
+                res.status(500).send({ message: "Failed to save feedback" });
+            }
+        });
+
+        // reported data get
+        app.get('/reported', async (req, res) => {
+            const result = await feedbackCullection.find().toArray()
             res.send(result)
         })
 
+        app.delete('/deletFeedback/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await feedbackCullection.deleteOne(query);
+            res.send(result);
+        })
 
         // addpost 
         app.post('/addpost', async (req, res) => {
@@ -243,15 +284,10 @@ async function run() {
 
         app.get('/adminProfile', async (req, res) => {
             const { search } = req.query;
-            // const { carentTime } = req.body;
-            // console.log('currentitem=', carentTime);
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
             const result = await addpostCullection.find(searchFilter).toArray()
             res.send(result)
         })
-
-
-
 
 
         // DELETE API Endpoint
@@ -265,11 +301,9 @@ async function run() {
 
         app.get('/addpost/:email'), async (req, res) => {
             const email = req.params?.email
-            console.log(email);
+            // console.log(email);
             const query = { UserEmail: email }
             const result = await addpostCullection.find(query).sort({ carentTime: -1 }).toArray()
-            // console.log(query, result);
-            // const result = await addpostCullection.find({ UserEmail: email }).sort({ carentTime: -1 }).toArray();
             res.send(result)
         }
 
@@ -352,8 +386,6 @@ async function run() {
             const result = await comentsCullection.find().toArray()
             res.send(result)
         })
-
-
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
