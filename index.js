@@ -108,14 +108,14 @@ async function run() {
         })
 
         // Announcement added for admin Announcement page
-        app.post('/announcement', async (req, res) => {
+        app.post('/announcement', verifiToken, verifiAdmin, async (req, res) => {
             const data = req.body;
             const result = await AnnouncementCullection.insertOne(data);
             res.send(result)
         })
 
         // Announcement fatch for admin Announcement page
-        app.get('/announcement',  async (req, res) => {
+        app.get('/announcement', async (req, res) => {
             const Announc = req.body;
             const result = await AnnouncementCullection.find(Announc).toArray()
             res.send(result)
@@ -163,7 +163,7 @@ async function run() {
         })
 
         // bage update
-        app.put('/users/:email', verifiToken, verifiAdmin, async (req, res) => {
+        app.put('/users/:email', async (req, res) => {
             const email = req.params.email;
             // console.log('bage', email);
             const query = { email: email };
