@@ -28,7 +28,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const tagesCullection = client.db("Postify").collection("tages");
         const AnnouncementCullection = client.db("Postify").collection("Announcement");
@@ -77,12 +77,12 @@ async function run() {
         }
 
         // admin 
-        app.get('/users/admin/:email', verifiToken, verifiAdmin, async (req, res) => {
+        app.get('/users/admin/:email', async (req, res) => {
             const email = req.params?.email;
             // console.log('182', email);
-            if (email !== req.decoded.email) {
-                return res.status(401).send({ message: 'unathureze access' })
-            }
+            // if (email !== req.decoded.email) {
+            //     return res.status(401).send({ message: 'unathureze access' })
+            // }
             const query = { email: email }
             const user = await bageCullection.findOne(query);
             // console.log('108 bagcullection admin chack', user);
@@ -108,14 +108,14 @@ async function run() {
         })
 
         // Announcement added for admin Announcement page
-        app.post('/announcement',async (req, res) => {
+        app.post('/announcement', async (req, res) => {
             const data = req.body;
             const result = await AnnouncementCullection.insertOne(data);
             res.send(result)
         })
 
         // Announcement fatch for admin Announcement page
-        app.get('/announcement', async (req, res) => {
+        app.get('/announcement',  async (req, res) => {
             const Announc = req.body;
             const result = await AnnouncementCullection.find(Announc).toArray()
             res.send(result)
@@ -264,7 +264,7 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/adminProfile', async (req, res) => {
+        app.get('/adminProfile', verifiToken, verifiAdmin, async (req, res) => {
             const { search } = req.query;
             const searchFilter = search ? { tag: { $regex: search, $options: 'i' } } : {};
             const result = await addpostCullection.find(searchFilter).toArray()
@@ -369,8 +369,8 @@ async function run() {
             res.send(result)
         })
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
