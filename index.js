@@ -115,7 +115,7 @@ async function run() {
         })
 
         // Announcement fatch for admin Announcement page
-        app.get('/announcement', verifiToken, async (req, res) => {
+        app.get('/announcement', async (req, res) => {
             const Announc = req.body;
             const result = await AnnouncementCullection.find(Announc).toArray()
             res.send(result)
